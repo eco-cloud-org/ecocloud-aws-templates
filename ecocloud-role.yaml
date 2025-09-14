@@ -1,0 +1,57 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "EcoCloud IAM Role with ECS, CloudWatch metrics, and Cost Explorer read-only access"
+
+Parameters:
+  EcoCloudAccountId:
+    Type: String
+    Description: "The AWS Account ID of EcoCloud (your account that will assume the role)."
+  ExternalId:
+    Type: String
+    Default: "eco-test-1234"
+    Description: "External ID for cross-account access (replace later with a unique value per customer)."
+
+Resources:
+  EcoCloudRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: EcoCloudECSAccessRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${EcoCloudAccountId}:root"
+            Action: "sts:AssumeRole"
+            Condition:
+              StringEquals:
+                "sts:ExternalId": !Ref ExternalId
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonECSReadOnlyAccess
+      Policies:
+        - PolicyName: EcoCloudCloudWatchMetrics
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudwatch:GetMetricData
+                  - cloudwatch:GetMetricStatistics
+                  - cloudwatch:ListMetrics
+                Resource: "*"
+        - PolicyName: EcoCloudCostExplorer
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ce:GetCostAndUsage
+                  - ce:GetCostForecast
+                  - ce:GetDimensionValues
+                  - ce:GetReservationUtilization
+                  - ce:GetSavingsPlansUtilization
+                Resource: "*"
+
+Outputs:
+  RoleArn:
+    Description: "ARN of the IAM Role that EcoCloud will assume"
+    Value: !GetAtt EcoCloudRole.Arn
